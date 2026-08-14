@@ -24,14 +24,24 @@ const client = new MongoClient(uri, {
 
 async function run() {
     try {
-        await client.connect();
+        // await client.connect();
         const db = client.db('task-submit')
+        const userCollection = db.collection('user')
         const taskSubmitCollection = db.collection('task')
+        // getuser
+        app.get('/api/getuser', async (req, res) => {
+            const result = await userCollection.find().toArray()
+            res.send(result)
+        })
         // task
         app.post('/api/posttask', async (req, res) => {
             const corsur = req.body;
             console.log(corsur);
-            const result = await taskSubmitCollection.insertOne(corsur)
+            const data = {
+                ...corsur,
+                date: new Date()
+            }
+            const result = await taskSubmitCollection.insertOne(data)
             res.send(result)
         })
         app.get('/api/getsubmit', async (req, res) => {
@@ -59,6 +69,13 @@ run().catch(console.dir);
 app.get('/', (req, res) => {
     res.send('hellow world')
 })
-app.listen(PORT, () => {
-    console.log('this isdder side')
-})
+
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`)
+    })
+}
+
+// Export app for Vercel serverless
+export default app
