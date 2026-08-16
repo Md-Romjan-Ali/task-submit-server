@@ -5,7 +5,7 @@ import { Application, Request, Response } from "express";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { MongoClient, ServerApiVersion } from "mongodb";
+import { MongoClient, ObjectId, ServerApiVersion } from "mongodb";
 const app: Application = express()
 const PORT = process.env.PORT || 5000
 
@@ -56,6 +56,12 @@ async function run() {
                 query.email = req.query.email;
             }
             const result = await taskSubmitCollection.find(query).toArray()
+            res.send(result)
+        })
+        app.delete('/api/deletetask/:id', async (req, res) => {
+            const id = req.params.id
+            const query = { _id: new ObjectId(id as string) }
+            const result = await taskSubmitCollection.deleteOne(query)
             res.send(result)
         })
         // await client.db("admin").command({ ping: 1 });
