@@ -1,6 +1,7 @@
 import { setServers } from "node:dns";
 setServers(["8.8.8.8", "8.8.4.4"]);
-
+// const nodemailer = require('nodemailer')
+import nodemailer from "nodemailer"
 import { Application, Request, Response } from "express";
 import express from "express";
 import cors from "cors";
@@ -28,6 +29,45 @@ async function run() {
         const db = client.db('task-submit')
         const userCollection = db.collection('user')
         const taskSubmitCollection = db.collection('task')
+        // reset start
+        app.post('/forgot-password', async (req, res) => {
+            console.log(req.body, 'from reset');
+            const { email } = req.body;
+            const user = await userCollection.findOne({ email });
+
+            if (!user) {
+                return res.status(404).json({ message: "Email not found." });
+            }
+
+            // Generate a secure 6-digit numerical code
+            const verificationCode = Math.floor(100000 + Math.random()).toString();
+
+            // Save code and 15-minute expiry to MongoDB
+            user.resetCode = verificationCode;
+            user.resetCodeExpires = Date.now() + 15 * 60 * 1000;
+            await user.save();
+
+            // Configure your email transporter (e.g., SendGrid, Gmail, Mailtrap)
+            const transporter = nodemailer.createTransport({
+                service: 'Gmail',
+                auth: {
+                    user: process.env.EMAIL_USER,
+                    pass: process.env.EMAIL_PASS // Use an App Password, not your master password
+                }
+            });
+
+            // Send email execution
+            await transporter.sendMail({
+                from: process.env.EMAIL_USER,
+                to: email,
+                subject: 'Your Password Reset Verification Code',
+                text: `Your password reset code is: ${verificationCode}. It expires in 15 minutes.`
+            });
+
+            res.status(200).json({ message: "Verification code sent to email." });
+
+        });
+
         // getuser
         app.get('/api/getuser', async (req, res) => {
             const result = await userCollection.find().toArray()
@@ -48,6 +88,7 @@ async function run() {
             const result = await taskSubmitCollection.find().toArray()
             res.send(result)
         })
+
         app.get('/api/getsubmitbyemail', async (req: Request, res: Response) => {
             const query: {
                 email?: string
